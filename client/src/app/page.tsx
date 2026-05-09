@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { fetchApi, Ride, RideCreateInput, RideDirection, RideRequest, User } from "@/lib/api";
 
@@ -31,6 +32,12 @@ function formatMoney(value: string) {
     style: "currency",
     currency: "BRL",
   }).format(Number(value));
+}
+
+function whatsappHref(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  const normalized = digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
+  return `https://wa.me/${normalized}`;
 }
 
 function emptyRideForm(): RideCreateInput {
@@ -483,7 +490,7 @@ function RideCard({
       <div className="mt-3 grid gap-2 text-sm text-stone-700 md:grid-cols-2">
         <p>{ride.allow_custom_pickup ? "Aceita embarque personalizado" : `Ponto: ${ride.fixed_gathering_point}`}</p>
         {ride.notes && <p>{ride.notes}</p>}
-        {ride.rider_phone && <p>Telefone do motorista: {ride.rider_phone}</p>}
+        {ride.rider_phone && <PhoneActions label="Motorista" phone={ride.rider_phone} />}
       </div>
 
       <div className="mt-4 flex justify-end">
@@ -538,7 +545,7 @@ function MyRideCard({
                   <p className="font-semibold text-stone-950">{request.passenger?.name}</p>
                   <p>Embarque: {request.pickup_address}</p>
                   {request.message && <p>Mensagem: {request.message}</p>}
-                  {request.passenger?.phone && <p>Telefone: {request.passenger.phone}</p>}
+                  {request.passenger?.phone && <PhoneActions label="Passageiro" phone={request.passenger.phone} />}
                 </div>
                 <span className="text-xs font-semibold text-stone-600">{statusLabels[request.status]}</span>
               </div>
@@ -604,9 +611,7 @@ function MyRequestCard({
         </span>
       </div>
       <p className="mt-2 text-sm text-stone-700">Embarque: {request.pickup_address}</p>
-      {request.driver_phone && (
-        <p className="mt-1 text-sm font-semibold text-stone-900">Motorista: {request.driver_phone}</p>
-      )}
+      {request.driver_phone && <PhoneActions label="Motorista" phone={request.driver_phone} />}
       {(request.status === "Pending" || request.status === "Accepted") && (
         <button
           type="button"
@@ -637,6 +642,46 @@ function Modal({ title, children, onClose }: { title: string; children: ReactNod
         </div>
         {children}
       </section>
+    </div>
+  );
+}
+
+function PhoneActions({ label, phone }: { label: string; phone: string }) {
+  const [copyLabel, setCopyLabel] = useState("Copiar");
+
+  async function copyPhone() {
+    try {
+      await navigator.clipboard.writeText(phone);
+      setCopyLabel("Copiado");
+      window.setTimeout(() => setCopyLabel("Copiar"), 1800);
+    } catch {
+      setCopyLabel("Erro");
+      window.setTimeout(() => setCopyLabel("Copiar"), 1800);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm text-stone-700">
+      <span>
+        {label}: <strong className="font-semibold text-stone-950">{phone}</strong>
+      </span>
+      <button
+        type="button"
+        onClick={copyPhone}
+        className="rounded-md border border-stone-300 px-2.5 py-1 text-xs font-semibold text-stone-700 hover:bg-stone-100"
+      >
+        {copyLabel}
+      </button>
+      <a
+        href={whatsappHref(phone)}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Abrir WhatsApp de ${label}`}
+        title={`Abrir WhatsApp de ${label}`}
+        className="inline-flex size-8 items-center justify-center rounded-md border border-emerald-200 bg-white hover:bg-emerald-50"
+      >
+        <Image src="/brands/whatsapp-glyph.svg" alt="" width={20} height={20} />
+      </a>
     </div>
   );
 }
