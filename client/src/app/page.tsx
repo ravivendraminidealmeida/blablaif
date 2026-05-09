@@ -20,6 +20,8 @@ const directionLabels: Record<RideDirection, string> = {
   FromCampus: "Saindo do campus",
 };
 
+type DashboardTab = "available" | "my-rides" | "requests";
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -67,11 +69,18 @@ export default function Dashboard() {
   const [requestRide, setRequestRide] = useState<Ride | null>(null);
   const [requestForm, setRequestForm] = useState({ pickup_address: "", message: "" });
   const [actionLoading, setActionLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("available");
 
   const scheduledMyRides = useMemo(
     () => myRides.filter((ride) => ride.status === "Scheduled"),
     [myRides],
   );
+
+  const tabs = [
+    { id: "available", label: "Caronas disponiveis", count: availableRides.length },
+    { id: "my-rides", label: "Minhas caronas", count: scheduledMyRides.length },
+    { id: "requests", label: "Minhas solicitacoes", count: myRequests.length },
+  ] satisfies { id: DashboardTab; label: string; count: number }[];
 
   async function loadDashboard() {
     setError("");
@@ -220,40 +229,71 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 xl:grid-cols-[1.25fr_0.9fr]">
-        <section>
-          <SectionHeader title="Caronas disponiveis" count={availableRides.length} />
-          {error && (
-            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-          <div className="grid gap-3">
-            {availableRides.length === 0 ? (
-              <EmptyState text="Nenhuma carona agendada no momento." />
-            ) : (
-              availableRides.map((ride) => (
-                <RideCard
-                  key={ride.id}
-                  ride={ride}
-                  currentUserId={user?.id}
-                  onRequest={() => {
-                    setRequestRide(ride);
-                    setRequestForm({
-                      pickup_address: ride.allow_custom_pickup ? "" : ride.fixed_gathering_point || "",
-                      message: "",
-                    });
-                  }}
-                />
-              ))
-            )}
-          </div>
-        </section>
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <nav className="mb-5 flex gap-2 overflow-x-auto border-b border-stone-200" aria-label="Secoes do painel">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold ${
+                  isActive
+                    ? "border-emerald-800 text-emerald-900"
+                    : "border-transparent text-stone-600 hover:border-stone-300 hover:text-stone-950"
+                }`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs ${
+                    isActive ? "bg-emerald-100 text-emerald-900" : "bg-stone-200 text-stone-700"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
 
-        <aside className="space-y-6">
+        {error && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {activeTab === "available" && (
+          <section>
+            <SectionHeader title="Caronas disponiveis" count={availableRides.length} />
+            <div className="grid gap-3">
+              {availableRides.length === 0 ? (
+                <EmptyState text="Nenhuma carona agendada no momento." />
+              ) : (
+                availableRides.map((ride) => (
+                  <RideCard
+                    key={ride.id}
+                    ride={ride}
+                    currentUserId={user?.id}
+                    onRequest={() => {
+                      setRequestRide(ride);
+                      setRequestForm({
+                        pickup_address: ride.allow_custom_pickup ? "" : ride.fixed_gathering_point || "",
+                        message: "",
+                      });
+                    }}
+                  />
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
+        {activeTab === "my-rides" && (
           <section>
             <SectionHeader title="Minhas caronas" count={scheduledMyRides.length} />
-            <div className="space-y-3">
+            <div className="grid gap-3">
               {myRides.length === 0 ? (
                 <EmptyState text="Voce ainda nao ofereceu caronas." />
               ) : (
@@ -276,10 +316,12 @@ export default function Dashboard() {
               )}
             </div>
           </section>
+        )}
 
+        {activeTab === "requests" && (
           <section>
             <SectionHeader title="Minhas solicitacoes" count={myRequests.length} />
-            <div className="space-y-3">
+            <div className="grid gap-3">
               {myRequests.length === 0 ? (
                 <EmptyState text="Voce ainda nao solicitou vagas." />
               ) : (
@@ -296,7 +338,7 @@ export default function Dashboard() {
               )}
             </div>
           </section>
-        </aside>
+        )}
       </div>
 
       {isRideFormOpen && (
