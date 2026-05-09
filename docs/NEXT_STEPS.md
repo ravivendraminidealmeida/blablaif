@@ -19,7 +19,7 @@ Ordered from highest practical return on investment to implementation effort.
 - [ ] Real institutional email verification instead of domain-only validation.
 - [ ] Multi-campus support with campus selection and campus-specific ride feeds.
 - [ ] Recurring rides for common weekly schedules.
-- [ ] Maps, geocoding, route distance, and automatic price suggestions.
+- [ ] Maps, geocoding, route distance, and automatic price suggestions. Consider [OpenFreeMap](https://openfreemap.org/).
 - [ ] Ratings, reports, and moderation tools.
 - [ ] Admin views for campuses, users, rides, and safety review.
 - [ ] Replace localStorage token handling with a more secure session strategy.
