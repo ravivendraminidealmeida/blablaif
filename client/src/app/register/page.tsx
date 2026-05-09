@@ -1,86 +1,132 @@
-'use client';
+"use client";
 
-import { useState } from "react";
-import { Button, Input, Card, CardBody, CardHeader, Link, Select, SelectItem } from "@heroui/react";
-import { fetchApi } from "@/lib/api";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FormEvent, useState } from "react";
+import { fetchApi } from "@/lib/api";
+
+const STUDENT_EMAIL_DOMAIN = "@aluno.ifsp.edu.br";
 
 export default function Register() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     password: "",
-    role: "Student",
-    college_id: 1, // Fixed to 1 as per current DB seeding
   });
-
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  function updateField(field: keyof typeof form, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setError("");
 
+    if (!form.email.toLowerCase().endsWith(STUDENT_EMAIL_DOMAIN)) {
+      setError(`Use um email terminado em ${STUDENT_EMAIL_DOMAIN}.`);
+      return;
+    }
+
+    setIsLoading(true);
     try {
       await fetchApi("/auth/register", {
         method: "POST",
         body: JSON.stringify({
-          ...formData,
-          college_id: Number(formData.college_id),
+          ...form,
+          role: "Student",
+          college_id: 1,
         }),
+        skipAuth: true,
       });
       router.push("/login");
-    } catch (err: any) {
-      setError(err.message || "Registration failed");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel cadastrar.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gradient-to-tr from-gray-900 to-gray-800">
-      <Card className="max-w-md w-full p-4 shadow-xl">
-        <CardHeader className="flex flex-col items-center">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-teal-400 bg-clip-text text-transparent">BlaBlaIF</h1>
-          <p className="text-sm text-default-500">Create your account</p>
-        </CardHeader>
-        <CardBody>
-          <form onSubmit={handleRegister} className="flex flex-col gap-4">
-            {error && <p className="text-danger text-sm text-center">{error}</p>}
-            
-            <Input label="Full Name" name="name" value={formData.name} onChange={handleChange} required />
-            <Input type="email" label="Email" name="email" value={formData.email} onChange={handleChange} required />
-            <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} required />
-            
-            <Select 
-              label="Role" 
-              name="role" 
-              selectedKeys={[formData.role]}
-              onChange={handleChange}
-            >
-              <SelectItem key="Student" value="Student">Student</SelectItem>
-              <SelectItem key="Professor" value="Professor">Professor</SelectItem>
-            </Select>
+    <main className="flex min-h-screen items-center justify-center px-4 py-10">
+      <section className="w-full max-w-md rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+            BlaBlaIF
+          </p>
+          <h1 className="mt-2 text-2xl font-bold text-stone-950">Criar cadastro</h1>
+          <p className="mt-1 text-sm text-stone-600">IFSP Campus Votuporanga</p>
+        </div>
 
-            <Input type="password" label="Password" name="password" value={formData.password} onChange={handleChange} required />
-            
-            <Button type="submit" color="primary" isLoading={isLoading} className="mt-4 font-semibold">
-              Sign Up
-            </Button>
-            
-            <p className="text-center text-sm mt-4">
-              Already have an account? <Link href="/login" size="sm">Login here</Link>
-            </p>
-          </form>
-        </CardBody>
-      </Card>
-    </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Nome completo</span>
+            <input
+              className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-stone-950 outline-none focus:border-emerald-700"
+              value={form.name}
+              onChange={(event) => updateField("name", event.target.value)}
+              required
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Email institucional</span>
+            <input
+              className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-stone-950 outline-none focus:border-emerald-700"
+              type="email"
+              value={form.email}
+              onChange={(event) => updateField("email", event.target.value)}
+              placeholder={`seu.nome${STUDENT_EMAIL_DOMAIN}`}
+              required
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Telefone</span>
+            <input
+              className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-stone-950 outline-none focus:border-emerald-700"
+              value={form.phone}
+              onChange={(event) => updateField("phone", event.target.value)}
+              required
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-stone-700">Senha</span>
+            <input
+              className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-stone-950 outline-none focus:border-emerald-700"
+              type="password"
+              value={form.password}
+              onChange={(event) => updateField("password", event.target.value)}
+              required
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full rounded-md bg-emerald-800 px-4 py-2 font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoading ? "Cadastrando..." : "Criar cadastro"}
+          </button>
+        </form>
+
+        <p className="mt-5 text-center text-sm text-stone-600">
+          Ja tem conta?{" "}
+          <Link href="/login" className="font-semibold text-emerald-800">
+            Entrar
+          </Link>
+        </p>
+      </section>
+    </main>
   );
 }

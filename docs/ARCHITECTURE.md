@@ -17,7 +17,7 @@ The core database architecture revolves around the College (Campus). Every user 
 1. **College (Campus)**
    - The central entity. Represents an IFSP campus.
    - `id` (PK)
-   - `name` (e.g., "IFSP - Campus São Paulo")
+   - `name` (e.g., "IFSP Campus Votuporanga")
    - `address`
 
 2. **Student**
@@ -33,12 +33,15 @@ The core database architecture revolves around the College (Campus). Every user 
    - An announcement created by a student offering a ride.
    - `id` (PK)
    - `rider_id` (FK -> Student.id)
+   - `direction` (Enum: ToCampus, FromCampus)
+   - `origin`
+   - `destination`
    - `departure_time` (Datetime)
-   - `total_kilometers` (Float, used to calculate price)
-   - `estimated_price` (Decimal) - The cost of the ride based on the total kilometers.
+   - `price_per_seat` (Decimal) - Manual V1 price per passenger.
    - `available_seats` (Integer)
    - `allow_custom_pickup` (Boolean) - Rider allows passengers to set their own pickup locations.
    - `fixed_gathering_point` (String, nullable) - If `allow_custom_pickup` is false, this is the designated meeting point.
+   - `notes` (String, nullable)
    - `status` (Enum: Scheduled, InProgress, Completed, Cancelled)
 
 4. **RidePassenger (Join Request)**
@@ -47,6 +50,7 @@ The core database architecture revolves around the College (Campus). Every user 
    - `ride_id` (FK -> Ride.id)
    - `passenger_id` (FK -> Student.id)
    - `pickup_address` (String) - Specified by the passenger when they request to join.
+   - `message` (String, nullable)
    - `status` (Enum: Pending, Accepted, Rejected, Cancelled)
 
 ### ER Diagram
@@ -77,11 +81,14 @@ erDiagram
         int id PK
         int rider_id FK
         datetime departure_time
-        float total_kilometers
-        decimal estimated_price
+        string direction
+        string origin
+        string destination
+        decimal price_per_seat
         int available_seats
         boolean allow_custom_pickup
         string fixed_gathering_point
+        string notes
         string status
     }
 
@@ -90,13 +97,15 @@ erDiagram
         int ride_id FK
         int passenger_id FK
         string pickup_address
+        string message
         string status
     }
 ```
 
 ### Business Rules & Flow
-1. A Student signs up and is linked to their respective IFSP campus (College).
-2. A Student (Rider) creates a Ride announcement, defining the total kilometers, departure time, and whether they accept custom pickup locations or have a fixed gathering point. The price is calculated based on distance.
-3. Another Student (Passenger) browses available rides and requests to join one. If they request to join, they specify their `pickup_address` (or accept the fixed gathering point if custom pickups aren't allowed).
-4. The Rider reviews pending `RidePassenger` requests and can accept or reject them. If `allow_custom_pickup` is true, the rider decides whether taking the specified route is feasible.
-5. Once accepted, the passenger is confirmed for the ride.
+1. V1 uses one fixed campus: IFSP Campus Votuporanga.
+2. A Student signs up with an `@aluno.ifsp.edu.br` email and is linked to the fixed campus.
+3. A Student (Rider) creates a Ride announcement, defining direction, route text, departure time, manual price per seat, seats, and whether they accept custom pickup locations or have a fixed gathering point.
+4. Another Student (Passenger) browses available rides and requests to join one. They specify `pickup_address` and may include a message.
+5. The Rider reviews pending `RidePassenger` requests and can accept or reject them.
+6. Seats are consumed only by accepted requests. Phone numbers are revealed only after acceptance.

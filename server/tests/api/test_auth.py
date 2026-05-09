@@ -3,7 +3,7 @@ import pytest
 def test_register_user(client, setup_college):
     response = client.post("/api/v1/auth/register", json={
         "name": "Test User",
-        "email": "test@ifsp.edu.br",
+        "email": "test@aluno.ifsp.edu.br",
         "phone": "999999999",
         "role": "Student",
         "college_id": 1,
@@ -11,13 +11,13 @@ def test_register_user(client, setup_college):
     })
     assert response.status_code == 200
     data = response.json()
-    assert data["email"] == "test@ifsp.edu.br"
+    assert data["email"] == "test@aluno.ifsp.edu.br"
     assert "id" in data
 
 def test_register_duplicate_user(client, setup_college):
     user_payload = {
         "name": "Test User",
-        "email": "duplicate@ifsp.edu.br",
+        "email": "duplicate@aluno.ifsp.edu.br",
         "phone": "999999999",
         "role": "Student",
         "college_id": 1,
@@ -31,11 +31,22 @@ def test_register_duplicate_user(client, setup_college):
     assert response.status_code == 400
     assert "already exists" in response.json()["detail"]
 
+def test_register_rejects_non_student_email(client, setup_college):
+    response = client.post("/api/v1/auth/register", json={
+        "name": "Invalid User",
+        "email": "invalid@example.com",
+        "phone": "999999999",
+        "role": "Student",
+        "college_id": 1,
+        "password": "securepassword123"
+    })
+    assert response.status_code == 422
+
 def test_login_user(client, setup_college):
     # Setup - Register a user first
     client.post("/api/v1/auth/register", json={
         "name": "Login User",
-        "email": "login@ifsp.edu.br",
+        "email": "login@aluno.ifsp.edu.br",
         "phone": "999999999",
         "role": "Student",
         "college_id": 1,
@@ -44,7 +55,7 @@ def test_login_user(client, setup_college):
 
     # Test Login
     response = client.post("/api/v1/auth/login", data={
-        "username": "login@ifsp.edu.br",
+        "username": "login@aluno.ifsp.edu.br",
         "password": "securepassword123"
     })
     
@@ -56,7 +67,7 @@ def test_login_user(client, setup_college):
 def test_login_wrong_password(client, setup_college):
     client.post("/api/v1/auth/register", json={
         "name": "Login User",
-        "email": "login2@ifsp.edu.br",
+        "email": "login2@aluno.ifsp.edu.br",
         "phone": "999999999",
         "role": "Student",
         "college_id": 1,
@@ -64,7 +75,7 @@ def test_login_wrong_password(client, setup_college):
     })
 
     response = client.post("/api/v1/auth/login", data={
-        "username": "login2@ifsp.edu.br",
+        "username": "login2@aluno.ifsp.edu.br",
         "password": "wrongpassword"
     })
     assert response.status_code == 401
@@ -76,7 +87,7 @@ def test_protected_route_unauthorized(client):
 def test_protected_route_authorized(client, setup_college):
     client.post("/api/v1/auth/register", json={
         "name": "Auth User",
-        "email": "auth@ifsp.edu.br",
+        "email": "auth@aluno.ifsp.edu.br",
         "phone": "999",
         "role": "Student",
         "college_id": 1,
@@ -84,7 +95,7 @@ def test_protected_route_authorized(client, setup_college):
     })
     
     login_req = client.post("/api/v1/auth/login", data={
-        "username": "auth@ifsp.edu.br",
+        "username": "auth@aluno.ifsp.edu.br",
         "password": "pass"
     })
     token = login_req.json()["access_token"]

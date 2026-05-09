@@ -53,7 +53,7 @@ def client(db_session):
 @pytest.fixture()
 def setup_college(db_session):
     """Seed the database with a College."""
-    college = models.College(id=1, name="IFSP Sao Paulo", address="Rua Pedro Vicente")
+    college = models.College(id=1, name="IFSP Campus Votuporanga", address="Av. Jeronimo Figueira da Costa, 3014")
     db_session.add(college)
     db_session.commit()
     return college

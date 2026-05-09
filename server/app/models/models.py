@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum, Numeric
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum, Numeric, Text
 from sqlalchemy.orm import relationship
 import enum
 from app.db.database import Base
@@ -18,6 +18,10 @@ class PassengerStatus(enum.Enum):
     Accepted = "Accepted"
     Rejected = "Rejected"
     Cancelled = "Cancelled"
+
+class RideDirection(enum.Enum):
+    ToCampus = "ToCampus"
+    FromCampus = "FromCampus"
 
 class College(Base):
     __tablename__ = "colleges"
@@ -48,12 +52,17 @@ class Ride(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     rider_id = Column(Integer, ForeignKey("users.id"))
+    direction = Column(Enum(RideDirection), default=RideDirection.ToCampus, nullable=False)
+    origin = Column(String, nullable=False)
+    destination = Column(String, nullable=False)
     departure_time = Column(DateTime, nullable=False)
-    total_kilometers = Column(Float, nullable=False)
-    estimated_price = Column(Numeric, nullable=False)
+    total_kilometers = Column(Float, nullable=True)
+    estimated_price = Column(Numeric, nullable=True)
+    price_per_seat = Column(Numeric, nullable=False)
     available_seats = Column(Integer, default=4)
     allow_custom_pickup = Column(Boolean, default=False)
     fixed_gathering_point = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
     status = Column(Enum(RideStatus), default=RideStatus.Scheduled)
 
     rider = relationship("User", back_populates="rides_offered")
@@ -66,6 +75,7 @@ class RidePassenger(Base):
     ride_id = Column(Integer, ForeignKey("rides.id"))
     passenger_id = Column(Integer, ForeignKey("users.id"))
     pickup_address = Column(String, nullable=False)
+    message = Column(Text, nullable=True)
     status = Column(Enum(PassengerStatus), default=PassengerStatus.Pending)
 
     ride = relationship("Ride", back_populates="passengers")

@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 from app.models.models import RoleType
-from typing import Optional
+
+IFSP_STUDENT_EMAIL_DOMAIN = "@aluno.ifsp.edu.br"
 
 class UserBase(BaseModel):
     name: str
@@ -8,6 +9,13 @@ class UserBase(BaseModel):
     phone: str
     role: RoleType = RoleType.Student
     college_id: int
+
+    @field_validator("email")
+    @classmethod
+    def validate_student_email(cls, email: EmailStr) -> EmailStr:
+        if not str(email).lower().endswith(IFSP_STUDENT_EMAIL_DOMAIN):
+            raise ValueError(f"Email must end with {IFSP_STUDENT_EMAIL_DOMAIN}")
+        return email
 
 class UserCreate(UserBase):
     password: str

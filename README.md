@@ -20,9 +20,12 @@ O sistema foca em transparência (verificação via credenciais estudantis nativ
 Para iniciar seu ambiente de desenvolvimento, siga este passo a passo.
 
 ### 1. Preparação de Ambiente
-Primeiro, garanta que você ativou o ambiente virtual e acesse a pasta `server`:
+Primeiro, crie/ative o ambiente virtual e acesse a pasta `server`:
 ```bash
 cd server
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ### 2. Configuração de Segredos
@@ -31,22 +34,43 @@ Crie o seu arquivo de diretrizes ambientais baseado no exemplo de nosso reposit�
 ```bash
 cp .env.example .env
 ```
-Isso habilitará chaves seguras locais para seu serviço de autenticação!
+O projeto tambem possui uma chave local de desenvolvimento como fallback, mas o `.env` deve ser usado para configurar ambientes compartilhados.
 
 ### 3. Executando Localmente (FastAPI / Uvicorn)
 Sempre execute o backend através de Uvicorn apontando para a fundação arquitetônica nativa localizada em `app/main.py`:
 ```bash
-venv\Scripts\uvicorn app.main:app --reload
+.venv/bin/uvicorn app.main:app --reload
 ```
-A sua base de dados SQLAlchemy (`blablaif.db`) será construída e populada inteiramente de modo automático no primeiro Boot!
+A base SQLite (`blablaif.db`) sera criada automaticamente. O V1 cria o campus fixo **IFSP Campus Votuporanga** e alguns dados locais de demonstracao quando a base esta vazia.
 
 Acesse a rica documentação interativa Open API Swagger clicando em: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ### 4. Rodando a Suíte de Automação (Testes)
 Quando realizar pull-requests com alterações estruturais no código, rode a bateria integral para conferir a compatibilidade. Nosso Pytest simula um SQLite isolado não sujando sua base de testes manuais originais:
 ```bash
-venv\Scripts\python -m pytest
+.venv/bin/python -m pytest
 ```
+
+### 5. Frontend (Next.js)
+Em outro terminal:
+```bash
+cd client
+npm install
+npm run dev
+```
+O frontend usa `NEXT_PUBLIC_API_URL` quando definido; caso contrario, chama `http://127.0.0.1:8000/api/v1`.
+
+---
+
+## ✅ Escopo V1
+- Cadastro/login com email `@aluno.ifsp.edu.br`.
+- Painel unico autenticado para caronas disponiveis, minhas caronas e minhas solicitacoes.
+- Criacao de carona com preco manual por vaga.
+- Solicitacao de vaga com endereco de embarque e mensagem opcional.
+- Aceite/recusa pelo motorista e cancelamento minimo.
+- Telefones visiveis somente apos aceite.
+
+Veja [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) para itens planejados fora do V1.
 
 ---
 

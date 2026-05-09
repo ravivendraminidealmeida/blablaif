@@ -9,7 +9,7 @@ def test_flow():
     try:
         college = db.query(models.College).filter(models.College.id == 1).first()
         if not college:
-            college = models.College(id=1, name="IFSP Sao Paulo", address="Rua Pedro Vicente")
+            college = models.College(id=1, name="IFSP Campus Votuporanga", address="Av. Jeronimo Figueira da Costa, 3014")
             db.add(college)
             db.commit()
     finally:
@@ -20,7 +20,7 @@ def test_flow():
     # 1. Register student
     register_data = {
         "name": "Jane Doe",
-        "email": "jane@ifsp.edu.br",
+        "email": "jane@aluno.ifsp.edu.br",
         "phone": "123456789",
         "role": "Student",
         "college_id": 1,
@@ -37,7 +37,7 @@ def test_flow():
     # 2. Login
     print("Testing Login...")
     login_data = {
-        "username": "jane@ifsp.edu.br",
+        "username": "jane@aluno.ifsp.edu.br",
         "password": "secretpassword"
     }
     resp = client.post("/api/v1/auth/login", data=login_data) # OAuth2 uses form data
