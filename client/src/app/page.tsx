@@ -676,7 +676,7 @@ function MyRideCard({
                   <p className="font-semibold text-stone-950">{request.passenger?.name}</p>
                   <p>Embarque: {request.pickup_address}</p>
                   {request.message && <p>Mensagem: {request.message}</p>}
-                  {request.passenger?.phone && <PhoneActions label="Passageiro" phone={request.passenger.phone} />}
+                  {request.passenger?.phone && <PhoneActions label="Telefone" phone={request.passenger.phone} />}
                 </div>
                 <span className="text-xs font-semibold text-stone-600">{statusLabels[request.status]}</span>
               </div>
