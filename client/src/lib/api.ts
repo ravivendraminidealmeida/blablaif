@@ -20,6 +20,14 @@ export type PasswordUpdateInput = {
   new_password: string;
 };
 
+export type Notification = {
+  id: number;
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+};
+
 export type RideDirection = "ToCampus" | "FromCampus";
 export type RideStatus = "Scheduled" | "InProgress" | "Completed" | "Cancelled";
 export type RequestStatus = "Pending" | "Accepted" | "Rejected" | "Cancelled";

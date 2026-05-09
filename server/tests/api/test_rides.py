@@ -111,6 +111,7 @@ def test_only_driver_can_accept_request_and_phone_reveals_after_acceptance(clien
     )
     driver_view = client.get("/api/v1/rides/mine", headers=driver_headers).json()
     passenger_view = client.get("/api/v1/rides", headers=passenger_headers).json()
+    passenger_notifications = client.get("/api/v1/notifications", headers=passenger_headers).json()
 
     assert unauthorized.status_code == 403
     assert before_accept[0]["requests"][0]["passenger"]["phone"] is None
@@ -118,6 +119,8 @@ def test_only_driver_can_accept_request_and_phone_reveals_after_acceptance(clien
     assert accepted.json()["status"] == "Accepted"
     assert driver_view[0]["requests"][0]["passenger"]["phone"] == "999999999"
     assert passenger_view[0]["rider_phone"] == "999999999"
+    assert passenger_notifications[0]["title"] == "Solicitacao aceita"
+    assert passenger_notifications[0]["read"] is False
 
 
 def test_seat_limit_blocks_second_accept(client, setup_college):
@@ -152,11 +155,49 @@ def test_passenger_and_driver_cancellations(client, setup_college):
         f"/api/v1/ride-requests/{request['id']}/cancel",
         headers=passenger_headers,
     )
+    driver_notifications = client.get("/api/v1/notifications", headers=driver_headers)
     cancel_ride = client.patch(f"/api/v1/rides/{ride['id']}/cancel", headers=driver_headers)
     available = client.get("/api/v1/rides", headers=passenger_headers)
 
     assert cancel_request.status_code == 200
     assert cancel_request.json()["status"] == "Cancelled"
+    assert driver_notifications.json()[0]["title"] == "Solicitacao cancelada"
     assert cancel_ride.status_code == 200
     assert cancel_ride.json()["status"] == "Cancelled"
     assert available.json() == []
+
+
+def test_reject_request_creates_notification_and_can_mark_read(client, setup_college):
+    driver_headers = register_and_login(client, "driver@aluno.ifsp.edu.br", "Driver")
+    passenger_headers = register_and_login(client, "passenger@aluno.ifsp.edu.br", "Passenger")
+    ride = create_ride(client, driver_headers)
+    request = create_request(client, passenger_headers, ride["id"]).json()
+
+    rejected = client.patch(
+        f"/api/v1/ride-requests/{request['id']}/reject",
+        headers=driver_headers,
+    )
+    unread_notifications = client.get("/api/v1/notifications", headers=passenger_headers)
+    read_notifications = client.patch("/api/v1/notifications/read", headers=passenger_headers)
+
+    assert rejected.status_code == 200
+    assert unread_notifications.json()[0]["title"] == "Solicitacao recusada"
+    assert unread_notifications.json()[0]["read"] is False
+    assert read_notifications.json()[0]["read"] is True
+
+
+def test_cancel_ride_notifies_active_passengers(client, setup_college):
+    driver_headers = register_and_login(client, "driver@aluno.ifsp.edu.br", "Driver")
+    passenger_headers = register_and_login(client, "passenger@aluno.ifsp.edu.br", "Passenger")
+    ride = create_ride(client, driver_headers)
+    request = create_request(client, passenger_headers, ride["id"]).json()
+    client.patch(
+        f"/api/v1/ride-requests/{request['id']}/accept",
+        headers=driver_headers,
+    )
+
+    cancelled = client.patch(f"/api/v1/rides/{ride['id']}/cancel", headers=driver_headers)
+    notifications = client.get("/api/v1/notifications", headers=passenger_headers)
+
+    assert cancelled.status_code == 200
+    assert notifications.json()[0]["title"] == "Carona cancelada"

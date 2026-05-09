@@ -4,9 +4,25 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_current_user
 from app.db.database import get_db
 from app.models import models
+from app.schemas import notification as notification_schema
 from app.schemas import ride as ride_schema
 
 router = APIRouter()
+
+
+def _create_notification(
+    db: Session,
+    user_id: int,
+    title: str,
+    message: str,
+) -> None:
+    db.add(
+        models.Notification(
+            user_id=user_id,
+            title=title,
+            message=message,
+        )
+    )
 
 
 def _accepted_count(ride: models.Ride) -> int:
@@ -146,6 +162,37 @@ def list_available_rides(
     return [_ride_response(ride, current_user) for ride in rides]
 
 
+@router.get("/notifications", response_model=list[notification_schema.NotificationResponse])
+def list_notifications(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return (
+        db.query(models.Notification)
+        .filter(models.Notification.user_id == current_user.id)
+        .order_by(models.Notification.created_at.desc(), models.Notification.id.desc())
+        .limit(20)
+        .all()
+    )
+
+
+@router.patch("/notifications/read", response_model=list[notification_schema.NotificationResponse])
+def mark_notifications_read(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    notifications = (
+        db.query(models.Notification)
+        .filter(models.Notification.user_id == current_user.id)
+        .all()
+    )
+    for notification in notifications:
+        notification.read = True
+
+    db.commit()
+    return list_notifications(db, current_user)
+
+
 @router.post("/rides", response_model=ride_schema.RideResponse, status_code=status.HTTP_201_CREATED)
 def create_ride(
     ride_in: ride_schema.RideCreate,
@@ -202,6 +249,17 @@ def cancel_ride(
         raise HTTPException(status_code=400, detail="Only scheduled rides can be cancelled")
 
     ride.status = models.RideStatus.Cancelled
+    for ride_request in ride.passengers:
+        if ride_request.status in {
+            models.PassengerStatus.Pending,
+            models.PassengerStatus.Accepted,
+        }:
+            _create_notification(
+                db,
+                ride_request.passenger_id,
+                "Carona cancelada",
+                f"{current_user.name} cancelou a carona de {ride.origin} para {ride.destination}.",
+            )
     db.commit()
     db.refresh(ride)
     return _ride_response(_get_ride_or_404(db, ride.id), current_user, include_requests=True)
@@ -306,6 +364,12 @@ def accept_request(
         raise HTTPException(status_code=400, detail="Ride has no available seats")
 
     ride_request.status = models.PassengerStatus.Accepted
+    _create_notification(
+        db,
+        ride_request.passenger_id,
+        "Solicitacao aceita",
+        f"{current_user.name} aceitou sua solicitacao para {ride_request.ride.origin} -> {ride_request.ride.destination}.",
+    )
     db.commit()
     db.refresh(ride_request)
     return _request_response_for_driver(ride_request)
@@ -324,6 +388,12 @@ def reject_request(
         raise HTTPException(status_code=400, detail="Only pending requests can be rejected")
 
     ride_request.status = models.PassengerStatus.Rejected
+    _create_notification(
+        db,
+        ride_request.passenger_id,
+        "Solicitacao recusada",
+        f"{current_user.name} recusou sua solicitacao para {ride_request.ride.origin} -> {ride_request.ride.destination}.",
+    )
     db.commit()
     db.refresh(ride_request)
     return _request_response_for_driver(ride_request)
@@ -345,6 +415,12 @@ def cancel_request(
         raise HTTPException(status_code=400, detail="Only pending or accepted requests can be cancelled")
 
     ride_request.status = models.PassengerStatus.Cancelled
+    _create_notification(
+        db,
+        ride_request.ride.rider_id,
+        "Solicitacao cancelada",
+        f"{current_user.name} cancelou a solicitacao para {ride_request.ride.origin} -> {ride_request.ride.destination}.",
+    )
     db.commit()
     db.refresh(ride_request)
     return ride_schema.RideRequestResponse(

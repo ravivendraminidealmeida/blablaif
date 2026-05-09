@@ -4,7 +4,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { fetchApi, Ride, RideCreateInput, RideDirection, RideRequest, User } from "@/lib/api";
+import { fetchApi, Notification, Ride, RideCreateInput, RideDirection, RideRequest, User } from "@/lib/api";
 
 const CAMPUS_NAME = "IFSP Campus Votuporanga";
 
@@ -63,9 +63,11 @@ export default function Dashboard() {
   const [availableRides, setAvailableRides] = useState<Ride[]>([]);
   const [myRides, setMyRides] = useState<Ride[]>([]);
   const [myRequests, setMyRequests] = useState<RideRequest[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isRideFormOpen, setIsRideFormOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [rideForm, setRideForm] = useState<RideCreateInput>(emptyRideForm);
   const [requestRide, setRequestRide] = useState<Ride | null>(null);
   const [requestForm, setRequestForm] = useState({ pickup_address: "", message: "" });
@@ -76,6 +78,7 @@ export default function Dashboard() {
     () => myRides.filter((ride) => ride.status === "Scheduled"),
     [myRides],
   );
+  const unreadNotifications = notifications.filter((notification) => !notification.read).length;
 
   const tabs = [
     { id: "available", label: "Caronas disponiveis", count: availableRides.length },
@@ -85,16 +88,18 @@ export default function Dashboard() {
 
   async function loadDashboard() {
     setError("");
-    const [me, rides, mine, requests] = await Promise.all([
+    const [me, rides, mine, requests, userNotifications] = await Promise.all([
       fetchApi<User>("/auth/me"),
       fetchApi<Ride[]>("/rides"),
       fetchApi<Ride[]>("/rides/mine"),
       fetchApi<RideRequest[]>("/ride-requests/mine"),
+      fetchApi<Notification[]>("/notifications"),
     ]);
     setUser(me);
     setAvailableRides(rides);
     setMyRides(mine);
     setMyRequests(requests);
+    setNotifications(userNotifications);
   }
 
   useEffect(() => {
@@ -191,6 +196,10 @@ export default function Dashboard() {
     }
   }
 
+  async function markNotificationsRead() {
+    setNotifications(await fetchApi<Notification[]>("/notifications/read", { method: "PATCH" }));
+  }
+
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -212,6 +221,26 @@ export default function Dashboard() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-stone-600">{user?.name}</span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsNotificationsOpen((current) => !current)}
+                className="rounded-md border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-100"
+              >
+                Notificacoes
+                {unreadNotifications > 0 && (
+                  <span className="ml-2 rounded-full bg-emerald-800 px-2 py-0.5 text-xs text-white">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </button>
+              {isNotificationsOpen && (
+                <NotificationsPanel
+                  notifications={notifications}
+                  onMarkRead={markNotificationsRead}
+                />
+              )}
+            </div>
             <Link
               href="/profile"
               className="rounded-md border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-100"
@@ -500,6 +529,59 @@ function EmptyState({ text }: { text: string }) {
     <div className="rounded-lg border border-dashed border-stone-300 bg-white px-4 py-6 text-sm text-stone-600">
       {text}
     </div>
+  );
+}
+
+function NotificationsPanel({
+  notifications,
+  onMarkRead,
+}: {
+  notifications: Notification[];
+  onMarkRead: () => void;
+}) {
+  const hasUnread = notifications.some((notification) => !notification.read);
+
+  return (
+    <section className="absolute right-0 top-12 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-stone-200 bg-white p-3 shadow-xl">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h2 className="text-sm font-bold text-stone-950">Notificacoes</h2>
+        <button
+          type="button"
+          onClick={onMarkRead}
+          disabled={!hasUnread}
+          className="rounded-md border border-stone-300 px-2.5 py-1 text-xs font-semibold text-stone-700 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Marcar lidas
+        </button>
+      </div>
+      <div className="max-h-80 overflow-auto">
+        {notifications.length === 0 ? (
+          <p className="px-2 py-6 text-sm text-stone-600">Nenhuma notificacao.</p>
+        ) : (
+          <div className="space-y-2">
+            {notifications.map((notification) => (
+              <article
+                key={notification.id}
+                className={`rounded-md border px-3 py-2 ${
+                  notification.read
+                    ? "border-stone-200 bg-white"
+                    : "border-emerald-200 bg-emerald-50"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-stone-950">{notification.title}</h3>
+                  {!notification.read && (
+                    <span className="mt-1 size-2 rounded-full bg-emerald-700" aria-label="Nao lida" />
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-stone-700">{notification.message}</p>
+                <p className="mt-2 text-xs text-stone-500">{formatDate(notification.created_at)}</p>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
