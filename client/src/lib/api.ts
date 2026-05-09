@@ -15,6 +15,11 @@ export type UserUpdateInput = {
   phone: string;
 };
 
+export type PasswordUpdateInput = {
+  current_password: string;
+  new_password: string;
+};
+
 export type RideDirection = "ToCampus" | "FromCampus";
 export type RideStatus = "Scheduled" | "InProgress" | "Completed" | "Cancelled";
 export type RequestStatus = "Pending" | "Accepted" | "Rejected" | "Cancelled";
@@ -109,6 +114,10 @@ export async function fetchApi<T>(endpoint: string, options: ApiOptions = {}): P
       }
     } catch {}
     throw new Error(errorMsg);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json();

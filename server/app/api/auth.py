@@ -79,3 +79,16 @@ def update_users_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+@router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def update_my_password(
+    password_in: user_schema.PasswordUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    if not security.verify_password(password_in.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    current_user.password_hash = security.get_password_hash(password_in.new_password)
+    db.commit()
+    return None

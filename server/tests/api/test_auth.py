@@ -163,3 +163,63 @@ def test_update_profile_rejects_duplicate_email(client, setup_college):
 
     assert response.status_code == 400
     assert "already exists" in response.json()["detail"]
+
+def test_update_password(client, setup_college):
+    client.post("/api/v1/auth/register", json={
+        "name": "Password User",
+        "email": "password@aluno.ifsp.edu.br",
+        "phone": "999",
+        "role": "Student",
+        "college_id": 1,
+        "password": "oldpassword"
+    })
+    login_req = client.post("/api/v1/auth/login", data={
+        "username": "password@aluno.ifsp.edu.br",
+        "password": "oldpassword"
+    })
+    token = login_req.json()["access_token"]
+
+    response = client.patch("/api/v1/auth/me/password", json={
+        "current_password": "oldpassword",
+        "new_password": "newpassword",
+    }, headers={"Authorization": f"Bearer {token}"})
+    old_login = client.post("/api/v1/auth/login", data={
+        "username": "password@aluno.ifsp.edu.br",
+        "password": "oldpassword"
+    })
+    new_login = client.post("/api/v1/auth/login", data={
+        "username": "password@aluno.ifsp.edu.br",
+        "password": "newpassword"
+    })
+
+    assert response.status_code == 204
+    assert old_login.status_code == 401
+    assert new_login.status_code == 200
+
+def test_update_password_rejects_wrong_current_password(client, setup_college):
+    client.post("/api/v1/auth/register", json={
+        "name": "Password User",
+        "email": "password2@aluno.ifsp.edu.br",
+        "phone": "999",
+        "role": "Student",
+        "college_id": 1,
+        "password": "oldpassword"
+    })
+    login_req = client.post("/api/v1/auth/login", data={
+        "username": "password2@aluno.ifsp.edu.br",
+        "password": "oldpassword"
+    })
+    token = login_req.json()["access_token"]
+
+    response = client.patch("/api/v1/auth/me/password", json={
+        "current_password": "wrongpassword",
+        "new_password": "newpassword",
+    }, headers={"Authorization": f"Bearer {token}"})
+    old_login = client.post("/api/v1/auth/login", data={
+        "username": "password2@aluno.ifsp.edu.br",
+        "password": "oldpassword"
+    })
+
+    assert response.status_code == 400
+    assert "Current password" in response.json()["detail"]
+    assert old_login.status_code == 200

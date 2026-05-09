@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { fetchApi, User, UserUpdateInput } from "@/lib/api";
+import { fetchApi, PasswordUpdateInput, User, UserUpdateInput } from "@/lib/api";
 
 const STUDENT_EMAIL_DOMAIN = "@aluno.ifsp.edu.br";
 
@@ -14,10 +14,17 @@ export default function Profile() {
     email: "",
     phone: "",
   });
+  const [passwordForm, setPasswordForm] = useState<PasswordUpdateInput>({
+    current_password: "",
+    new_password: "",
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileSuccess, setProfileSuccess] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -45,13 +52,17 @@ export default function Profile() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updatePasswordField(field: keyof PasswordUpdateInput, value: string) {
+    setPasswordForm((current) => ({ ...current, [field]: value }));
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
-    setSuccess("");
+    setProfileError("");
+    setProfileSuccess("");
 
     if (!form.email.toLowerCase().endsWith(STUDENT_EMAIL_DOMAIN)) {
-      setError(`Use um email terminado em ${STUDENT_EMAIL_DOMAIN}.`);
+      setProfileError(`Use um email terminado em ${STUDENT_EMAIL_DOMAIN}.`);
       return;
     }
 
@@ -66,11 +77,34 @@ export default function Profile() {
         email: user.email,
         phone: user.phone,
       });
-      setSuccess("Perfil atualizado.");
+      setProfileSuccess("Perfil atualizado.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nao foi possivel atualizar o perfil.");
+      setProfileError(err instanceof Error ? err.message : "Nao foi possivel atualizar o perfil.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    setIsChangingPassword(true);
+    try {
+      await fetchApi<void>("/auth/me/password", {
+        method: "PATCH",
+        body: JSON.stringify(passwordForm),
+      });
+      setPasswordForm({
+        current_password: "",
+        new_password: "",
+      });
+      setPasswordSuccess("Senha atualizada.");
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : "Nao foi possivel atualizar a senha.");
+    } finally {
+      setIsChangingPassword(false);
     }
   }
 
@@ -102,14 +136,14 @@ export default function Profile() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
+          {profileError && (
             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
+              {profileError}
             </div>
           )}
-          {success && (
+          {profileSuccess && (
             <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              {success}
+              {profileSuccess}
             </div>
           )}
 
@@ -152,6 +186,53 @@ export default function Profile() {
           >
             {isSaving ? "Salvando..." : "Salvar perfil"}
           </button>
+        </form>
+
+        <form onSubmit={handlePasswordSubmit} className="mt-8 border-t border-stone-200 pt-6">
+          <h2 className="text-lg font-bold text-stone-950">Alterar senha</h2>
+          <div className="mt-4 space-y-4">
+            {passwordError && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccess && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                {passwordSuccess}
+              </div>
+            )}
+
+            <label className="block">
+              <span className="text-sm font-medium text-stone-700">Senha atual</span>
+              <input
+                className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-stone-950 outline-none focus:border-emerald-700"
+                type="password"
+                value={passwordForm.current_password}
+                onChange={(event) => updatePasswordField("current_password", event.target.value)}
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-stone-700">Nova senha</span>
+              <input
+                className="mt-1 w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-stone-950 outline-none focus:border-emerald-700"
+                type="password"
+                value={passwordForm.new_password}
+                onChange={(event) => updatePasswordField("new_password", event.target.value)}
+                minLength={6}
+                required
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={isChangingPassword}
+              className="w-full rounded-md border border-stone-300 px-4 py-2 font-semibold text-stone-800 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isChangingPassword ? "Salvando..." : "Alterar senha"}
+            </button>
+          </div>
         </form>
       </section>
     </main>

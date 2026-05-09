@@ -34,6 +34,10 @@ class UserUpdate(BaseModel):
             raise ValueError(f"Email must end with {IFSP_STUDENT_EMAIL_DOMAIN}")
         return email
 
+class PasswordUpdate(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=6)
+
 class UserResponse(UserBase):
     id: int
 
