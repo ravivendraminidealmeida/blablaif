@@ -56,3 +56,26 @@ def login_access_token(
 @router.get("/me", response_model=user_schema.UserResponse)
 def read_users_me(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+@router.patch("/me", response_model=user_schema.UserResponse)
+def update_users_me(
+    user_in: user_schema.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    updates = user_in.model_dump(exclude_unset=True)
+
+    if "email" in updates and updates["email"] != current_user.email:
+        existing_user = db.query(models.User).filter(models.User.email == updates["email"]).first()
+        if existing_user and existing_user.id != current_user.id:
+            raise HTTPException(
+                status_code=400,
+                detail="The user with this email already exists in the system.",
+            )
+
+    for field, value in updates.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user

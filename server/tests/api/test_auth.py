@@ -104,3 +104,62 @@ def test_protected_route_authorized(client, setup_college):
     assert response.status_code == 200
     assert "Welcome" in response.json()["message"]
     assert "Auth User" in response.json()["message"]
+
+def test_update_profile(client, setup_college):
+    client.post("/api/v1/auth/register", json={
+        "name": "Profile User",
+        "email": "profile@aluno.ifsp.edu.br",
+        "phone": "999",
+        "role": "Student",
+        "college_id": 1,
+        "password": "pass"
+    })
+    login_req = client.post("/api/v1/auth/login", data={
+        "username": "profile@aluno.ifsp.edu.br",
+        "password": "pass"
+    })
+    token = login_req.json()["access_token"]
+
+    response = client.patch("/api/v1/auth/me", json={
+        "name": "Updated Profile",
+        "email": "updated.profile@aluno.ifsp.edu.br",
+        "phone": "(17) 99999-1111",
+    }, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Updated Profile"
+    assert data["email"] == "updated.profile@aluno.ifsp.edu.br"
+    assert data["phone"] == "(17) 99999-1111"
+    assert data["role"] == "Student"
+    assert data["college_id"] == 1
+
+def test_update_profile_rejects_duplicate_email(client, setup_college):
+    client.post("/api/v1/auth/register", json={
+        "name": "First User",
+        "email": "first@aluno.ifsp.edu.br",
+        "phone": "111",
+        "role": "Student",
+        "college_id": 1,
+        "password": "pass"
+    })
+    client.post("/api/v1/auth/register", json={
+        "name": "Second User",
+        "email": "second@aluno.ifsp.edu.br",
+        "phone": "222",
+        "role": "Student",
+        "college_id": 1,
+        "password": "pass"
+    })
+    login_req = client.post("/api/v1/auth/login", data={
+        "username": "first@aluno.ifsp.edu.br",
+        "password": "pass"
+    })
+    token = login_req.json()["access_token"]
+
+    response = client.patch("/api/v1/auth/me", json={
+        "email": "second@aluno.ifsp.edu.br",
+    }, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 400
+    assert "already exists" in response.json()["detail"]

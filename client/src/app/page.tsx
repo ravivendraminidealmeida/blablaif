@@ -2,6 +2,7 @@
 
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { fetchApi, Ride, RideCreateInput, RideDirection, RideRequest, User } from "@/lib/api";
 
@@ -211,6 +212,12 @@ export default function Dashboard() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-stone-600">{user?.name}</span>
+            <Link
+              href="/profile"
+              className="rounded-md border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-100"
+            >
+              Perfil
+            </Link>
             <button
               type="button"
               onClick={() => setIsRideFormOpen(true)}

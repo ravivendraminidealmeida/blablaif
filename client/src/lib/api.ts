@@ -9,6 +9,12 @@ export type User = {
   college_id: number;
 };
 
+export type UserUpdateInput = {
+  name: string;
+  email: string;
+  phone: string;
+};
+
 export type RideDirection = "ToCampus" | "FromCampus";
 export type RideStatus = "Scheduled" | "InProgress" | "Completed" | "Cancelled";
 export type RequestStatus = "Pending" | "Accepted" | "Rejected" | "Cancelled";
