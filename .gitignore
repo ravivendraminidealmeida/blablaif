@@ -24,6 +24,10 @@ htmlcov/
 *.sqlite3
 *.db
 
+# Node / frontend (binarios nativos por plataforma — recrie com `npm install`)
+node_modules/
+.next/
+
 # OS generated files
 .DS_Store
 Thumbs.db
